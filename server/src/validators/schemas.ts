@@ -29,9 +29,16 @@ export const categoryCreateSchema = z.object({
   description: z.string().max(500).optional(),
   slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
   sort_order: z.number().int().optional(),
+  parent_id: z.string().uuid().optional(),
 });
 
-export const categoryUpdateSchema = categoryCreateSchema.partial();
+export const categoryUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).optional(),
+  slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/).optional(),
+  sort_order: z.number().int().optional(),
+  parent_id: z.string().uuid().nullable().optional(),
+});
 
 export const threadCreateSchema = z.object({
   title: z.string().min(1).max(MAX_TITLE_LENGTH),

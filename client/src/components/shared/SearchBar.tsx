@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 
 export default function SearchBar() {
   const [query, setQuery] = useState('');
@@ -13,13 +15,14 @@ export default function SearchBar() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input
+    <form onSubmit={handleSubmit} className="relative w-full">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Input
         type="search"
         placeholder="Search threads and posts..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="w-full h-9 px-3 rounded-md border bg-background text-sm"
+        className="pl-9 bg-muted/50 border-border/50 focus-visible:ring-primary/50"
       />
     </form>
   );

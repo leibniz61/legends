@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { validate } from '../middleware/validate.js';
 import { registerSchema, loginSchema } from '../validators/schemas.js';
 import { supabaseAdmin } from '../config/supabase.js';
@@ -6,8 +7,17 @@ import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
+// Rate limit auth endpoints: 10 attempts per 15 minutes per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts. Please try again later.' },
+});
+
 // POST /api/auth/register
-router.post('/register', validate(registerSchema), async (req, res, next) => {
+router.post('/register', authLimiter, validate(registerSchema), async (req, res, next) => {
   try {
     const { email, password, username } = req.body;
 
@@ -49,7 +59,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
 });
 
 // POST /api/auth/login
-router.post('/login', validate(loginSchema), async (req, res, next) => {
+router.post('/login', authLimiter, validate(loginSchema), async (req, res, next) => {
   try {
     const { email, password } = req.body;
 

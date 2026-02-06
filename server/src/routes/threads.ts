@@ -50,14 +50,14 @@ router.get('/categories/:slug/threads', async (req, res, next) => {
 });
 
 // GET /api/threads/:id
-router.get('/:id', async (req, res, next) => {
+router.get('/threads/:id', async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const offset = (page - 1) * POSTS_PER_PAGE;
 
     const { data: thread } = await supabaseAdmin
       .from('threads')
-      .select('*, author:profiles(id, username, display_name, avatar_url), category:categories(id, name, slug)')
+      .select('*, author:profiles(id, username, display_name, avatar_url), category:categories(id, name, slug, parent:parent_id(id, name, slug))')
       .eq('id', req.params.id)
       .single();
 
@@ -73,7 +73,35 @@ router.get('/:id', async (req, res, next) => {
       .order('created_at', { ascending: true })
       .range(offset, offset + POSTS_PER_PAGE - 1);
 
-    res.json({ thread, posts: posts || [], total: count || 0, page });
+    // If user is authenticated, get their reactions for these posts
+    let userReactions: Record<string, { id: string; reaction_type: string }> = {};
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ') && posts?.length) {
+      try {
+        const { data: { user } } = await supabaseAdmin.auth.getUser(authHeader.split(' ')[1]);
+        if (user) {
+          const { data: reactions } = await supabaseAdmin
+            .from('post_reactions')
+            .select('id, post_id, reaction_type')
+            .eq('user_id', user.id)
+            .in('post_id', posts.map(p => p.id));
+
+          reactions?.forEach(r => {
+            userReactions[r.post_id] = { id: r.id, reaction_type: r.reaction_type };
+          });
+        }
+      } catch {
+        // Ignore auth errors for public viewing
+      }
+    }
+
+    // Attach user reactions to posts
+    const postsWithReactions = posts?.map(post => ({
+      ...post,
+      user_reaction: userReactions[post.id] || null,
+    }));
+
+    res.json({ thread, posts: postsWithReactions || [], total: count || 0, page });
   } catch (err) {
     next(err);
   }
@@ -139,7 +167,7 @@ router.post('/categories/:slug/threads', requireAuth, validate(threadCreateSchem
 });
 
 // PUT /api/threads/:id
-router.put('/:id', requireAuth, validate(threadUpdateSchema), async (req, res, next) => {
+router.put('/threads/:id', requireAuth, validate(threadUpdateSchema), async (req, res, next) => {
   try {
     const { data: thread } = await supabaseAdmin
       .from('threads')
@@ -176,7 +204,7 @@ router.put('/:id', requireAuth, validate(threadUpdateSchema), async (req, res, n
 });
 
 // DELETE /api/threads/:id (admin)
-router.delete('/:id', requireAuth, requireAdmin, async (req, res, next) => {
+router.delete('/threads/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const { error } = await supabaseAdmin
       .from('threads')
@@ -195,7 +223,7 @@ router.delete('/:id', requireAuth, requireAdmin, async (req, res, next) => {
 });
 
 // PUT /api/threads/:id/pin (admin)
-router.put('/:id/pin', requireAuth, requireAdmin, async (req, res, next) => {
+router.put('/threads/:id/pin', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const { data: thread } = await supabaseAdmin
       .from('threads')
@@ -227,7 +255,7 @@ router.put('/:id/pin', requireAuth, requireAdmin, async (req, res, next) => {
 });
 
 // PUT /api/threads/:id/lock (admin)
-router.put('/:id/lock', requireAuth, requireAdmin, async (req, res, next) => {
+router.put('/threads/:id/lock', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const { data: thread } = await supabaseAdmin
       .from('threads')

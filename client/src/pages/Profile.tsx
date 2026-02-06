@@ -4,6 +4,13 @@ import api from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Profile as ProfileType, Post } from '@bookoflegends/shared';
 import { formatDistanceToNow, format } from 'date-fns';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Shield, ScrollText, MessageSquare, Calendar, Settings } from 'lucide-react';
 
 export default function Profile() {
   const { username } = useParams<{ username: string }>();
@@ -26,74 +33,121 @@ export default function Profile() {
   });
 
   if (profileLoading) {
-    return <div className="text-center py-12 text-muted-foreground">Loading profile...</div>;
+    return (
+      <div className="max-w-3xl mx-auto space-y-4">
+        <Card className="bg-card/50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-16 w-16 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (!profileData) {
-    return <div className="text-center py-12 text-muted-foreground">User not found</div>;
+    return (
+      <Card className="max-w-3xl mx-auto bg-card/50">
+        <CardContent className="py-12 text-center text-muted-foreground">
+          User not found
+        </CardContent>
+      </Card>
+    );
   }
 
   const isOwn = currentUser?.id === profileData.id;
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="border rounded-lg p-6 mb-8">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center text-2xl font-bold">
-              {(profileData.display_name || profileData.username)[0].toUpperCase()}
+      {/* Profile card */}
+      <Card className="bg-card/50 border-border/60 mb-8">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={profileData.avatar_url || undefined} />
+                <AvatarFallback className="bg-primary/20 text-primary text-2xl font-heading">
+                  {(profileData.display_name || profileData.username)[0].toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-2xl font-heading font-bold">
+                  {profileData.display_name || profileData.username}
+                </h1>
+                <p className="text-muted-foreground">@{profileData.username}</p>
+                {profileData.role === 'admin' && (
+                  <Badge className="gap-1 mt-1">
+                    <Shield className="h-3 w-3" />
+                    Admin
+                  </Badge>
+                )}
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">
-                {profileData.display_name || profileData.username}
-              </h1>
-              <p className="text-muted-foreground">@{profileData.username}</p>
-              {profileData.role === 'admin' && (
-                <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded mt-1 inline-block">
-                  Admin
-                </span>
-              )}
+            {isOwn && (
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/settings/profile">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Edit Profile
+                </Link>
+              </Button>
+            )}
+          </div>
+
+          {profileData.bio && (
+            <p className="mt-4 text-sm leading-relaxed">{profileData.bio}</p>
+          )}
+
+          <Separator className="my-4" />
+
+          <div className="flex gap-6 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <ScrollText className="h-3.5 w-3.5" />
+              <span>{profileData.thread_count} threads</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span>{profileData.post_count} posts</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Joined {format(new Date(profileData.created_at), 'MMM yyyy')}</span>
             </div>
           </div>
-          {isOwn && (
-            <Link
-              to="/settings/profile"
-              className="text-sm border px-3 py-1.5 rounded-md hover:bg-accent"
-            >
-              Edit Profile
-            </Link>
-          )}
-        </div>
+        </CardContent>
+      </Card>
 
-        {profileData.bio && <p className="mt-4">{profileData.bio}</p>}
-
-        <div className="flex gap-6 mt-4 text-sm text-muted-foreground">
-          <span>{profileData.thread_count} threads</span>
-          <span>{profileData.post_count} posts</span>
-          <span>Joined {format(new Date(profileData.created_at), 'MMM yyyy')}</span>
-        </div>
-      </div>
-
-      <h2 className="text-lg font-semibold mb-4">Recent Posts</h2>
+      {/* Recent posts */}
+      <h2 className="text-lg font-heading font-semibold mb-4">Recent Posts</h2>
       <div className="space-y-2">
         {postsData?.posts.map((post) => (
-          <Link
-            key={post.id}
-            to={`/threads/${post.thread.id}`}
-            className="block p-3 border rounded-lg hover:bg-accent transition-colors"
-          >
-            <div className="text-sm font-medium">{post.thread.title}</div>
-            <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
-              {post.content.slice(0, 200)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {formatDistanceToNow(new Date(post.created_at))} ago
-            </div>
+          <Link key={post.id} to={`/threads/${post.thread.id}`}>
+            <Card className="bg-card/50 hover:bg-card hover:border-primary/30 transition-all duration-200 cursor-pointer group">
+              <CardContent className="p-4">
+                <h3 className="text-sm font-medium group-hover:text-primary transition-colors">
+                  {post.thread.title}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  {post.content.slice(0, 200)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {formatDistanceToNow(new Date(post.created_at))} ago
+                </p>
+              </CardContent>
+            </Card>
           </Link>
         ))}
 
         {postsData?.posts.length === 0 && (
-          <p className="text-muted-foreground text-center py-8">No posts yet</p>
+          <Card className="bg-card/50">
+            <CardContent className="py-8 text-center text-muted-foreground">
+              No posts yet
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

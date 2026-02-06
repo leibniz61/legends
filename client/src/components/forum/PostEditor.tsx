@@ -1,14 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MDEditor from '@uiw/react-md-editor';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import api from '@/lib/api';
+import { Send } from 'lucide-react';
 
 interface PostEditorProps {
   threadId: string;
   onSuccess: () => void;
+  initialContent?: string;
 }
 
-export default function PostEditor({ threadId, onSuccess }: PostEditorProps) {
-  const [content, setContent] = useState('');
+export default function PostEditor({ threadId, onSuccess, initialContent = '' }: PostEditorProps) {
+  const [content, setContent] = useState(initialContent);
+
+  useEffect(() => {
+    if (initialContent) {
+      setContent(prev => prev ? `${prev}\n\n${initialContent}` : initialContent);
+    }
+  }, [initialContent]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -32,18 +42,21 @@ export default function PostEditor({ threadId, onSuccess }: PostEditorProps) {
   return (
     <div>
       {error && (
-        <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-sm">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-      <MDEditor value={content} onChange={(val) => setContent(val || '')} height={200} />
-      <button
+      <div data-color-mode="dark">
+        <MDEditor value={content} onChange={(val) => setContent(val || '')} height={200} />
+      </div>
+      <Button
         onClick={handleSubmit}
         disabled={loading || !content.trim()}
-        className="mt-3 bg-primary text-primary-foreground px-6 py-2 rounded-md text-sm hover:opacity-90 disabled:opacity-50"
+        className="mt-3"
       >
+        <Send className="mr-2 h-4 w-4" />
         {loading ? 'Posting...' : 'Post Reply'}
-      </button>
+      </Button>
     </div>
   );
 }

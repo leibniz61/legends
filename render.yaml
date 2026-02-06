@@ -3,8 +3,8 @@ services:
     name: bookoflegends-api
     runtime: node
     rootDir: server
-    buildCommand: cd ../shared && npm install && npm run build && cd ../server && npm install && npm run build
-    startCommand: npm start
+    buildCommand: cd ../shared && yarn install && yarn build && cd ../server && yarn install && yarn build
+    startCommand: yarn start
     envVars:
       - key: SUPABASE_URL
         sync: false
@@ -21,7 +21,7 @@ services:
     name: bookoflegends-web
     runtime: static
     rootDir: client
-    buildCommand: cd ../shared && npm install && npm run build && cd ../client && npm install && npm run build
+    buildCommand: cd ../shared && yarn install && yarn build && cd ../client && yarn install && yarn build
     staticPublishPath: dist
     headers:
       - path: /*

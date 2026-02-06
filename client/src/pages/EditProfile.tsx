@@ -2,6 +2,13 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Settings } from 'lucide-react';
 
 export default function EditProfile() {
   const { profile } = useAuth();
@@ -31,49 +38,63 @@ export default function EditProfile() {
   }
 
   if (!profile) {
-    return <div className="text-center py-12 text-muted-foreground">Please sign in</div>;
+    return (
+      <Card className="max-w-md mx-auto mt-12 bg-card/50">
+        <CardContent className="py-12 text-center text-muted-foreground">
+          Please sign in to edit your profile.
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
     <div className="max-w-md mx-auto mt-12">
-      <h1 className="text-2xl font-bold mb-6">Edit Profile</h1>
+      <Card className="bg-card/50 border-border/60">
+        <CardHeader>
+          <CardTitle className="text-xl font-heading flex items-center gap-2">
+            <Settings className="h-5 w-5 text-primary" />
+            Edit Profile
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-      {error && (
-        <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-sm">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Display Name</label>
-          <input
-            type="text"
-            maxLength={30}
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            className="w-full h-10 px-3 rounded-md border bg-background"
-            placeholder={profile.username}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Bio</label>
-          <textarea
-            maxLength={500}
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            className="w-full h-24 px-3 py-2 rounded-md border bg-background resize-none"
-            placeholder="Tell us about yourself..."
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-primary text-primary-foreground px-6 py-2 rounded-md text-sm hover:opacity-90 disabled:opacity-50"
-        >
-          {loading ? 'Saving...' : 'Save Changes'}
-        </button>
-      </form>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input
+                id="displayName"
+                type="text"
+                maxLength={30}
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder={profile.username}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bio">Bio</Label>
+              <Textarea
+                id="bio"
+                maxLength={500}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell us about yourself..."
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                {bio.length}/500
+              </p>
+            </div>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,29 +1,116 @@
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useEffect, useState, useRef } from 'react';
+import DOMPurify from 'dompurify';
+import MDEditor from '@uiw/react-md-editor';
 import api from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import type { Thread, Post } from '@bookoflegends/shared';
+import { POSTS_PER_PAGE } from '@bookoflegends/shared';
 import { formatDistanceToNow } from 'date-fns';
 import PostEditor from '@/components/forum/PostEditor';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Pin,
+  Lock,
+  Shield,
+  ChevronLeft,
+  ChevronRight,
+  MessageSquare,
+  RefreshCw,
+  Heart,
+  Quote,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
+  X,
+  Check,
+} from 'lucide-react';
 
 export default function ThreadView() {
   const { id } = useParams<{ id: string }>();
   const { profile } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const page = parseInt(searchParams.get('page') || '1');
   const [newPostCount, setNewPostCount] = useState(0);
+  const [quoteContent, setQuoteContent] = useState('');
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [deletePostId, setDeletePostId] = useState<string | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['thread', id, page],
     queryFn: async () => {
       const { data } = await api.get(`/threads/${id}?page=${page}`);
-      return data as { thread: Thread & { category: { id: string; name: string; slug: string } }; posts: Post[]; total: number; page: number };
+      return data as {
+        thread: Thread & {
+          category: {
+            id: string;
+            name: string;
+            slug: string;
+            parent: { id: string; name: string; slug: string } | null;
+          };
+        };
+        posts: Post[];
+        total: number;
+        page: number;
+      };
     },
   });
 
-  // Real-time subscription for new posts
+  const likeMutation = useMutation({
+    mutationFn: async ({ postId, liked }: { postId: string; liked: boolean }) => {
+      if (liked) {
+        await api.delete(`/posts/${postId}/reactions`, { data: { reaction_type: 'like' } });
+      } else {
+        await api.post(`/posts/${postId}/reactions`, { reaction_type: 'like' });
+      }
+    },
+    onSuccess: () => refetch(),
+  });
+
+  const editMutation = useMutation({
+    mutationFn: async ({ postId, content }: { postId: string; content: string }) => {
+      await api.put(`/posts/${postId}`, { content });
+    },
+    onSuccess: () => {
+      setEditingPostId(null);
+      setEditContent('');
+      refetch();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      await api.delete(`/posts/${postId}`);
+    },
+    onSuccess: () => {
+      setDeletePostId(null);
+      refetch();
+    },
+  });
+
   useEffect(() => {
     if (!id) return;
 
@@ -53,80 +140,325 @@ export default function ThreadView() {
     refetch();
   }
 
+  function handleQuote(post: Post, postNumber: number) {
+    const author = post.author?.display_name || post.author?.username || 'Unknown';
+    const quote = `> **${author}** wrote in [#${postNumber}](#post-${post.id}):\n> ${post.content.split('\n').join('\n> ')}\n\n`;
+    setQuoteContent(quote);
+    editorRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function handleEditClick(post: Post) {
+    setEditingPostId(post.id);
+    setEditContent(post.content);
+  }
+
   if (isLoading) {
-    return <div className="text-center py-12 text-muted-foreground">Loading thread...</div>;
+    return (
+      <div className="max-w-4xl mx-auto space-y-4">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-8 w-96" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
   }
 
   if (!data) {
-    return <div className="text-center py-12 text-muted-foreground">Thread not found</div>;
+    return (
+      <Card className="bg-card/50">
+        <CardContent className="py-12 text-center text-muted-foreground">
+          Thread not found
+        </CardContent>
+      </Card>
+    );
   }
 
   const { thread, posts } = data;
+  const totalPages = Math.ceil(data.total / POSTS_PER_PAGE);
+  const firstPostId = posts[0]?.id;
 
   return (
-    <div>
+    <div className="max-w-4xl mx-auto">
       {/* Breadcrumb */}
-      <div className="text-sm text-muted-foreground mb-4">
-        <Link to="/" className="hover:underline">Home</Link>
-        {' / '}
-        <Link to={`/c/${thread.category.slug}`} className="hover:underline">
+      <nav className="text-sm text-muted-foreground mb-4 flex items-center gap-1 flex-wrap">
+        <Link to="/" className="hover:text-primary transition-colors">
+          Home
+        </Link>
+        <span className="mx-1">/</span>
+        {thread.category.parent && (
+          <>
+            <Link
+              to={`/c/${thread.category.parent.slug}`}
+              className="hover:text-primary transition-colors"
+            >
+              {thread.category.parent.name}
+            </Link>
+            <span className="mx-1">/</span>
+          </>
+        )}
+        <Link to={`/c/${thread.category.slug}`} className="hover:text-primary transition-colors">
           {thread.category.name}
         </Link>
-      </div>
+      </nav>
 
-      <h1 className="text-2xl font-bold mb-2">{thread.title}</h1>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        {thread.is_pinned && <span className="bg-secondary px-2 py-0.5 rounded text-xs">Pinned</span>}
-        {thread.is_locked && <span className="bg-secondary px-2 py-0.5 rounded text-xs">Locked</span>}
+      {/* Thread header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-heading font-bold mb-2">{thread.title}</h1>
+        <div className="flex items-center gap-2">
+          {thread.is_pinned && (
+            <Badge variant="secondary" className="gap-1">
+              <Pin className="h-3 w-3" /> Pinned
+            </Badge>
+          )}
+          {thread.is_locked && (
+            <Badge variant="secondary" className="gap-1">
+              <Lock className="h-3 w-3" /> Locked
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* New posts banner */}
       {newPostCount > 0 && (
-        <button
+        <Button
+          variant="outline"
+          className="w-full mb-4 border-primary/40 text-primary hover:bg-primary/10"
           onClick={handleNewPostsClick}
-          className="w-full py-2 mb-4 bg-primary/10 text-primary text-sm rounded-md hover:bg-primary/20"
         >
-          {newPostCount} new {newPostCount === 1 ? 'reply' : 'replies'} - Click to load
-        </button>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          {newPostCount} new {newPostCount === 1 ? 'reply' : 'replies'} — Click to load
+        </Button>
       )}
 
       {/* Posts */}
       <div className="space-y-4">
-        {posts.map((post) => (
-          <div key={post.id} className="border rounded-lg p-4">
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex items-center gap-2">
-                <Link to={`/u/${post.author?.username}`} className="font-medium hover:underline">
-                  {post.author?.display_name || post.author?.username || 'Unknown'}
-                </Link>
-                {post.author?.role === 'admin' && (
-                  <span className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded">Admin</span>
+        {posts.map((post, index) => {
+          const postNumber = (page - 1) * POSTS_PER_PAGE + index + 1;
+          const isOwner = profile?.id === post.author_id;
+          const canDelete = isOwner && post.id !== firstPostId;
+          const isLiked = !!post.user_reaction;
+
+          return (
+            <Card key={post.id} id={`post-${post.id}`} className="bg-card/50 overflow-hidden">
+              <CardContent className="p-0">
+                {/* Post header */}
+                <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b border-border/50">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={post.author?.avatar_url || undefined} />
+                      <AvatarFallback className="bg-primary/20 text-primary text-xs font-heading">
+                        {(post.author?.display_name || post.author?.username || '?')
+                          .charAt(0)
+                          .toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/u/${post.author?.username}`}
+                          className="text-sm font-medium hover:text-primary transition-colors"
+                        >
+                          {post.author?.display_name || post.author?.username || 'Unknown'}
+                        </Link>
+                        {post.author?.role === 'admin' && (
+                          <Badge className="gap-1 text-[10px] px-1.5 py-0">
+                            <Shield className="h-2.5 w-2.5" />
+                            Admin
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(post.created_at))} ago
+                    {post.is_edited && ' (edited)'}
+                  </span>
+                </div>
+
+                {/* Post content */}
+                {editingPostId === post.id ? (
+                  <div className="p-4">
+                    <div data-color-mode="dark">
+                      <MDEditor
+                        value={editContent}
+                        onChange={(val) => setEditContent(val || '')}
+                        height={200}
+                      />
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        onClick={() => editMutation.mutate({ postId: post.id, content: editContent })}
+                        disabled={editMutation.isPending || !editContent.trim()}
+                      >
+                        <Check className="mr-1 h-3.5 w-3.5" />
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingPostId(null);
+                          setEditContent('');
+                        }}
+                      >
+                        <X className="mr-1 h-3.5 w-3.5" />
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="prose prose-sm max-w-none p-4"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content_html) }}
+                  />
                 )}
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(post.created_at))} ago
-                {post.is_edited && ' (edited)'}
-              </span>
-            </div>
-            <div
-              className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: post.content_html }}
-            />
-          </div>
-        ))}
+
+                {/* Post footer */}
+                <div className="flex items-center justify-between px-4 pb-3">
+                  <span className="text-xs text-muted-foreground/50">#{postNumber}</span>
+
+                  <div className="flex items-center gap-1">
+                    {/* Like button */}
+                    {profile && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-7 px-2 ${isLiked ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-red-500'}`}
+                        onClick={() => likeMutation.mutate({ postId: post.id, liked: isLiked })}
+                        disabled={likeMutation.isPending}
+                      >
+                        <Heart className={`h-3.5 w-3.5 ${isLiked ? 'fill-current' : ''}`} />
+                        {post.reaction_count > 0 && (
+                          <span className="ml-1 text-xs">{post.reaction_count}</span>
+                        )}
+                      </Button>
+                    )}
+
+                    {/* Quote button */}
+                    {profile && !thread.is_locked && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-muted-foreground hover:text-primary"
+                        onClick={() => handleQuote(post, postNumber)}
+                      >
+                        <Quote className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+
+                    {/* Edit/Delete dropdown for post owner */}
+                    {isOwner && !thread.is_locked && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-muted-foreground"
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditClick(post)}>
+                            <Pencil className="mr-2 h-3.5 w-3.5" />
+                            Edit
+                          </DropdownMenuItem>
+                          {canDelete && (
+                            <DropdownMenuItem
+                              onClick={() => setDeletePostId(post.id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-3.5 w-3.5" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Reply form */}
-      {profile && !thread.is_locked && (
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold mb-4">Reply</h2>
-          <PostEditor threadId={thread.id} onSuccess={() => refetch()} />
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-6">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setSearchParams({ page: String(page - 1) })}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm text-muted-foreground px-3">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => setSearchParams({ page: String(page + 1) })}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       )}
 
-      {thread.is_locked && (
-        <p className="mt-8 text-center text-muted-foreground">This thread is locked.</p>
-      )}
+      <Separator className="my-8" />
+
+      {/* Reply form */}
+      {profile && !thread.is_locked ? (
+        <div ref={editorRef}>
+          <h2 className="text-lg font-heading font-semibold mb-4 flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            Reply
+          </h2>
+          <PostEditor
+            threadId={thread.id}
+            onSuccess={() => {
+              setQuoteContent('');
+              refetch();
+            }}
+            initialContent={quoteContent}
+          />
+        </div>
+      ) : thread.is_locked ? (
+        <Card className="bg-muted/30">
+          <CardContent className="py-6 text-center text-muted-foreground flex items-center justify-center gap-2">
+            <Lock className="h-4 w-4" />
+            This thread is locked.
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deletePostId} onOpenChange={() => setDeletePostId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Post</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this post? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeletePostId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletePostId && deleteMutation.mutate(deletePostId)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

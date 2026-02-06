@@ -8,6 +8,17 @@ export interface Category {
   post_count: number;
   last_post_at: string | null;
   created_at: string;
+  parent_id: string | null;
+}
+
+// For nested API responses (homepage)
+export interface CategoryWithChildren extends Category {
+  children: Category[];
+}
+
+// For breadcrumb navigation
+export interface CategoryWithParent extends Category {
+  parent: Pick<Category, 'id' | 'name' | 'slug'> | null;
 }
 
 export interface CategoryCreate {
@@ -15,6 +26,7 @@ export interface CategoryCreate {
   description?: string;
   slug: string;
   sort_order?: number;
+  parent_id?: string;
 }
 
 export interface CategoryUpdate {
@@ -22,4 +34,5 @@ export interface CategoryUpdate {
   description?: string;
   slug?: string;
   sort_order?: number;
+  parent_id?: string | null;
 }

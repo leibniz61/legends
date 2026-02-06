@@ -7,9 +7,19 @@ export interface Post {
   content: string;
   content_html: string;
   is_edited: boolean;
+  reaction_count: number;
   created_at: string;
   updated_at: string;
   author?: Profile;
+  user_reaction?: PostReaction | null;
+}
+
+export interface PostReaction {
+  id: string;
+  post_id: string;
+  user_id: string;
+  reaction_type: string;
+  created_at: string;
 }
 
 export interface PostCreate {

@@ -1,7 +1,15 @@
 import { useState, type FormEvent } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import MDEditor from '@uiw/react-md-editor';
 import api from '@/lib/api';
+import type { CategoryWithParent } from '@bookoflegends/shared';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ScrollText } from 'lucide-react';
 
 export default function NewThread() {
   const { slug } = useParams<{ slug: string }>();
@@ -10,6 +18,14 @@ export default function NewThread() {
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const { data: categoryData } = useQuery({
+    queryKey: ['category', slug],
+    queryFn: async () => {
+      const { data } = await api.get(`/categories/${slug}`);
+      return data.category as CategoryWithParent;
+    },
+  });
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -30,39 +46,66 @@ export default function NewThread() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">New Thread</h1>
+      <nav className="text-sm text-muted-foreground mb-4">
+        <Link to="/" className="hover:text-primary transition-colors">Home</Link>
+        <span className="mx-2">/</span>
+        {categoryData?.parent && (
+          <>
+            <Link to={`/c/${categoryData.parent.slug}`} className="hover:text-primary transition-colors">
+              {categoryData.parent.name}
+            </Link>
+            <span className="mx-2">/</span>
+          </>
+        )}
+        <Link to={`/c/${slug}`} className="hover:text-primary transition-colors">
+          {categoryData?.name || slug}
+        </Link>
+        <span className="mx-2">/</span>
+        <span>New Thread</span>
+      </nav>
 
-      {error && (
-        <div className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-sm">
-          {error}
-        </div>
-      )}
+      <Card className="bg-card/50 border-border/60">
+        <CardHeader>
+          <CardTitle className="text-xl font-heading flex items-center gap-2">
+            <ScrollText className="h-5 w-5 text-primary" />
+            New Thread
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Title</label>
-          <input
-            type="text"
-            required
-            maxLength={200}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full h-10 px-3 rounded-md border bg-background"
-            placeholder="Thread title"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Content</label>
-          <MDEditor value={content} onChange={(val) => setContent(val || '')} height={300} />
-        </div>
-        <button
-          type="submit"
-          disabled={loading || !title.trim() || !content.trim()}
-          className="bg-primary text-primary-foreground px-6 py-2 rounded-md text-sm hover:opacity-90 disabled:opacity-50"
-        >
-          {loading ? 'Creating...' : 'Create Thread'}
-        </button>
-      </form>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                type="text"
+                required
+                maxLength={200}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Thread title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Content</Label>
+              <div data-color-mode="dark">
+                <MDEditor value={content} onChange={(val) => setContent(val || '')} height={300} />
+              </div>
+            </div>
+            <Button
+              type="submit"
+              disabled={loading || !title.trim() || !content.trim()}
+            >
+              {loading ? 'Creating...' : 'Create Thread'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

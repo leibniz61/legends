@@ -65,7 +65,7 @@ router.post('/threads/:id/posts', requireAuth, validate(postCreateSchema), async
 });
 
 // PUT /api/posts/:id
-router.put('/:id', requireAuth, validate(postUpdateSchema), async (req, res, next) => {
+router.put('/posts/:id', requireAuth, validate(postUpdateSchema), async (req, res, next) => {
   try {
     const { data: post } = await supabaseAdmin
       .from('posts')
@@ -108,13 +108,104 @@ router.put('/:id', requireAuth, validate(postUpdateSchema), async (req, res, nex
   }
 });
 
-// DELETE /api/posts/:id (admin)
-router.delete('/:id', requireAuth, requireAdmin, async (req, res, next) => {
+// DELETE /api/posts/:id (author or admin)
+router.delete('/posts/:id', requireAuth, async (req, res, next) => {
   try {
+    const { data: post } = await supabaseAdmin
+      .from('posts')
+      .select('author_id, thread_id')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!post) {
+      res.status(404).json({ error: 'Post not found' });
+      return;
+    }
+
+    // Check authorization
+    if (post.author_id !== req.user!.id && req.user!.role !== 'admin') {
+      res.status(403).json({ error: 'Not authorized' });
+      return;
+    }
+
+    // Check if this is the first post in the thread (can't delete - must delete thread instead)
+    const { data: firstPost } = await supabaseAdmin
+      .from('posts')
+      .select('id')
+      .eq('thread_id', post.thread_id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (firstPost?.id === req.params.id) {
+      res.status(400).json({ error: 'Cannot delete the opening post. Delete the thread instead.' });
+      return;
+    }
+
     const { error } = await supabaseAdmin
       .from('posts')
       .delete()
       .eq('id', req.params.id);
+
+    if (error) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/posts/:id/reactions - Add a reaction
+router.post('/posts/:id/reactions', requireAuth, async (req, res, next) => {
+  try {
+    const { reaction_type = 'like' } = req.body;
+
+    const { data: post } = await supabaseAdmin
+      .from('posts')
+      .select('id')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!post) {
+      res.status(404).json({ error: 'Post not found' });
+      return;
+    }
+
+    const { data: reaction, error } = await supabaseAdmin
+      .from('post_reactions')
+      .upsert({
+        post_id: req.params.id,
+        user_id: req.user!.id,
+        reaction_type,
+      }, { onConflict: 'post_id,user_id,reaction_type' })
+      .select()
+      .single();
+
+    if (error) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    res.status(201).json({ reaction });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/posts/:id/reactions - Remove a reaction
+router.delete('/posts/:id/reactions', requireAuth, async (req, res, next) => {
+  try {
+    const { reaction_type = 'like' } = req.body;
+
+    const { error } = await supabaseAdmin
+      .from('post_reactions')
+      .delete()
+      .eq('post_id', req.params.id)
+      .eq('user_id', req.user!.id)
+      .eq('reaction_type', reaction_type);
 
     if (error) {
       res.status(400).json({ error: error.message });

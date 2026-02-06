@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env.js'; // Must be first — loads .env before any other imports
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -25,8 +25,8 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/categories', categoryRoutes);
-app.use('/api/threads', threadRoutes);
-app.use('/api/posts', postRoutes);
+app.use('/api', threadRoutes); // Handles /api/threads/* and /api/categories/:slug/threads
+app.use('/api', postRoutes); // Handles /api/threads/:id/posts and /api/posts/*
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/admin', adminRoutes);
