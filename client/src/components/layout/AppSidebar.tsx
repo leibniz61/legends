@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ScrollText,
   ChevronRight,
   PanelLeftClose,
   PanelLeft,
@@ -38,12 +37,24 @@ export default function AppSidebar() {
     : null;
 
   return (
-    <aside
-      className={cn(
-        "h-full border-r border-border bg-card/50 transition-[width] duration-200 overflow-hidden",
-        isOpen ? "w-64" : "w-0",
-      )}
-    >
+    <>
+      {/* Backdrop for mobile */}
+      <div
+        className={cn(
+          "fixed inset-0 bg-background/80 z-40 lg:hidden transition-opacity duration-200",
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        onClick={toggle}
+      />
+      <aside
+        className={cn(
+          "h-full border-r border-border bg-card overflow-hidden",
+          "transition-transform duration-200 ease-in-out lg:transition-[width] lg:duration-200",
+          // Mobile/tablet: fixed overlay
+          "fixed left-0 top-0 z-50 w-64 lg:relative lg:z-auto",
+          isOpen ? "translate-x-0 lg:w-64" : "-translate-x-full lg:translate-x-0 lg:w-0",
+        )}
+      >
       <div className="w-64 h-full flex flex-col">
         {/* Header with toggle */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -89,6 +100,7 @@ export default function AppSidebar() {
         </nav>
       </div>
     </aside>
+    </>
   );
 }
 
@@ -124,21 +136,17 @@ function CategoryMenuItem({ category, currentSlug }: CategoryMenuItemProps) {
 
   if (!hasChildren) {
     return (
-      <div className="flex items-center min-w-0">
-        <div className="w-6 shrink-0" />
-        <Link
-          to={`/c/${category.slug}`}
-          className={cn(
-            "flex-1 flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-colors min-w-0",
-            isActive
-              ? "bg-primary/10 text-primary font-medium"
-              : "text-foreground hover:bg-muted",
-          )}
-        >
-          <ScrollText className="h-4 w-4 shrink-0" />
-          <span className="truncate">{category.name}</span>
-        </Link>
-      </div>
+      <Link
+        to={`/c/${category.slug}`}
+        className={cn(
+          "block ml-6 px-2 py-2 rounded-md text-sm transition-colors truncate",
+          isActive
+            ? "bg-primary/10 text-primary font-medium"
+            : "text-foreground hover:bg-muted",
+        )}
+      >
+        {category.name}
+      </Link>
     );
   }
 
@@ -158,14 +166,13 @@ function CategoryMenuItem({ category, currentSlug }: CategoryMenuItemProps) {
         <Link
           to={`/c/${category.slug}`}
           className={cn(
-            "flex-1 flex items-center gap-2 px-2 py-2 rounded-md text-sm transition-colors min-w-0",
+            "flex-1 px-2 py-2 rounded-md text-sm transition-colors min-w-0 truncate",
             isActive
               ? "bg-primary/10 text-primary font-medium"
               : "text-foreground hover:bg-muted",
           )}
         >
-          <ScrollText className="h-4 w-4 shrink-0" />
-          <span className="truncate">{category.name}</span>
+          {category.name}
         </Link>
       </div>
 
