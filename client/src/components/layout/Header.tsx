@@ -29,17 +29,10 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-card/80 backdrop-blur-md">
-      <div className="container mx-auto px-4 flex h-16 items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 shrink-0">
-          <span className="text-xl font-heading font-bold text-primary tracking-wide">
-            Book of Legends
-          </span>
-        </Link>
-
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-card/80 backdrop-blur-md">
+      <div className="px-4 flex h-16 items-center justify-end gap-4">
         {/* Search - desktop */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
+        <div className="hidden md:block w-64">
           <SearchBar />
         </div>
 

@@ -2,14 +2,14 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Thread, CategoryWithParent } from '@bookoflegends/shared';
+import type { Thread, CategoryWithParent, CategoryWithChildren } from '@bookoflegends/shared';
 import { THREADS_PER_PAGE } from '@bookoflegends/shared';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pin, Lock, MessageSquare, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Pin, Lock, MessageSquare, Clock, ChevronLeft, ChevronRight, ScrollText } from 'lucide-react';
 
 export default function CategoryView() {
   const { slug } = useParams<{ slug: string }>();
@@ -32,6 +32,21 @@ export default function CategoryView() {
       return data as { threads: Thread[]; total: number; page: number };
     },
   });
+
+  // Fetch subcategories for parent categories (reuses categories cache)
+  const { data: allCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data } = await api.get('/categories');
+      return data.categories as CategoryWithChildren[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Find subcategories if this is a parent category
+  const subcategories = categoryData && !categoryData.parent
+    ? allCategories?.find((c) => c.slug === slug)?.children || []
+    : [];
 
   const totalPages = threadsData ? Math.ceil(threadsData.total / THREADS_PER_PAGE) : 0;
 
@@ -67,6 +82,40 @@ export default function CategoryView() {
           </Button>
         )}
       </div>
+
+      {/* Subcategories - only for parent categories */}
+      {subcategories.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Subcategories
+          </h2>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {subcategories.map((sub) => (
+              <Link key={sub.id} to={`/c/${sub.slug}`}>
+                <Card className="bg-card/50 hover:bg-card hover:border-primary/30 transition-all">
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-2">
+                      <ScrollText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div className="min-w-0">
+                        <h3 className="font-medium text-sm">{sub.name}</h3>
+                        {sub.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                            {sub.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                          <span>{sub.thread_count} threads</span>
+                          <span>{sub.post_count} posts</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Thread list */}
       {isLoading ? (
