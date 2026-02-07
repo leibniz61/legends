@@ -1,53 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import api from '@/lib/api';
-import type { Category, CategoryWithChildren } from '@bookoflegends/shared';
-import { formatDistanceToNow } from 'date-fns';
-import { MessageSquare, ScrollText, Clock, ChevronRight, ChevronDown } from 'lucide-react';
-
-function CategoryCard({ category, isSubcategory = false }: { category: Category; isSubcategory?: boolean }) {
-  return (
-    <Link to={`/c/${category.slug}`}>
-      <Card className={`bg-card/50 hover:bg-card hover:border-primary/30 transition-all duration-200 cursor-pointer group ${isSubcategory ? 'border-l-2 border-l-primary/30' : ''}`}>
-        <CardContent className={isSubcategory ? 'p-4' : 'p-5'}>
-          <div className="flex justify-between items-start gap-4">
-            <div className="min-w-0">
-              <h2 className={`font-heading font-semibold group-hover:text-primary transition-colors truncate ${isSubcategory ? 'text-base' : 'text-lg'}`}>
-                {category.name}
-              </h2>
-              {category.description && (
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                  {category.description}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-col items-end gap-1 text-sm text-muted-foreground shrink-0">
-              <div className="flex items-center gap-1.5">
-                <ScrollText className="h-3.5 w-3.5" />
-                <span>{category.thread_count} threads</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <MessageSquare className="h-3.5 w-3.5" />
-                <span>{category.post_count} posts</span>
-              </div>
-              {category.last_post_at && (
-                <div className="flex items-center gap-1.5 text-xs">
-                  <Clock className="h-3 w-3" />
-                  <span>{formatDistanceToNow(new Date(category.last_post_at))} ago</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { LoadingState } from "@/components/shared";
+import CategoryCard from "@/components/forum/CategoryCard";
+import api from "@/lib/api";
+import type { CategoryWithChildren } from "@bookoflegends/shared";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 function ParentCategoryGroup({ category }: { category: CategoryWithChildren }) {
   const [isOpen, setIsOpen] = useState(true);
@@ -76,9 +40,9 @@ function ParentCategoryGroup({ category }: { category: CategoryWithChildren }) {
         </div>
 
         {hasChildren && (
-          <CollapsibleContent className="space-y-2 ml-9">
+          <CollapsibleContent className="flex flex-col gap-2 ml-9">
             {category.children.map((child) => (
-              <CategoryCard key={child.id} category={child} isSubcategory />
+              <CategoryCard key={child.id} category={child} compact />
             ))}
           </CollapsibleContent>
         )}
@@ -89,9 +53,9 @@ function ParentCategoryGroup({ category }: { category: CategoryWithChildren }) {
 
 export default function Home() {
   const { data, isLoading } = useQuery({
-    queryKey: ['categories'],
+    queryKey: ["categories"],
     queryFn: async () => {
-      const { data } = await api.get('/categories');
+      const { data } = await api.get("/categories");
       return data.categories as CategoryWithChildren[];
     },
   });
@@ -112,22 +76,7 @@ export default function Home() {
       {/* Categories */}
       <div className="space-y-2">
         {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="bg-card/50">
-              <CardContent className="p-5">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2">
-                    <Skeleton className="h-5 w-48" />
-                    <Skeleton className="h-4 w-72" />
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          <LoadingState variant="category" count={4} />
         ) : data?.length === 0 ? (
           <Card className="bg-card/50">
             <CardContent className="py-12 text-center text-muted-foreground">

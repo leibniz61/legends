@@ -7,6 +7,27 @@ import { POSTS_PER_PAGE } from '@bookoflegends/shared';
 
 const router = Router();
 
+// GET /api/profiles/search?q=username - Search profiles for @mention autocomplete
+router.get('/search', async (req, res, next) => {
+  try {
+    const q = (req.query.q as string)?.trim();
+    if (!q || q.length < 2) {
+      res.json({ profiles: [] });
+      return;
+    }
+
+    const { data } = await supabaseAdmin
+      .from('profiles')
+      .select('id, username, display_name, avatar_url')
+      .ilike('username', `${q}%`)
+      .limit(10);
+
+    res.json({ profiles: data || [] });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/profiles/:username
 router.get('/:username', async (req, res, next) => {
   try {

@@ -9,10 +9,18 @@ export interface Thread {
   is_pinned: boolean;
   is_locked: boolean;
   post_count: number;
+  view_count: number;
   last_post_at: string;
   created_at: string;
   updated_at: string;
   author?: Profile;
+}
+
+export interface ThreadRead {
+  user_id: string;
+  thread_id: string;
+  last_read_at: string;
+  last_post_number: number;
 }
 
 export interface ThreadCreate {

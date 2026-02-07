@@ -1,24 +1,35 @@
-import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import api from '@/lib/api';
-import { useAuth } from '@/contexts/AuthContext';
-import type { Thread, CategoryWithParent, CategoryWithChildren } from '@bookoflegends/shared';
-import { THREADS_PER_PAGE } from '@bookoflegends/shared';
-import { formatDistanceToNow } from 'date-fns';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pin, Lock, MessageSquare, Clock, ChevronLeft, ChevronRight, ScrollText } from 'lucide-react';
+import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import type {
+  Thread,
+  CategoryWithParent,
+  CategoryWithChildren,
+} from "@bookoflegends/shared";
+
+// Extended thread with read status and view count (from API when authenticated)
+interface ThreadWithReadStatus extends Thread {
+  has_unread: boolean;
+  unread_count: number;
+  view_count: number;
+}
+import { THREADS_PER_PAGE } from "@bookoflegends/shared";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { LoadingState } from "@/components/shared";
+import ThreadCard from "@/components/forum/ThreadCard";
+import CategoryCard from "@/components/forum/CategoryCard";
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function CategoryView() {
   const { slug } = useParams<{ slug: string }>();
   const { profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const page = parseInt(searchParams.get('page') || '1');
+  const page = parseInt(searchParams.get("page") || "1");
 
   const { data: categoryData } = useQuery({
-    queryKey: ['category', slug],
+    queryKey: ["category", slug],
     queryFn: async () => {
       const { data } = await api.get(`/categories/${slug}`);
       return data.category as CategoryWithParent;
@@ -26,29 +37,38 @@ export default function CategoryView() {
   });
 
   const { data: threadsData, isLoading } = useQuery({
-    queryKey: ['threads', slug, page],
+    queryKey: ["threads", slug, page],
     queryFn: async () => {
-      const { data } = await api.get(`/categories/${slug}/threads?page=${page}`);
-      return data as { threads: Thread[]; total: number; page: number };
+      const { data } = await api.get(
+        `/categories/${slug}/threads?page=${page}`,
+      );
+      return data as {
+        threads: ThreadWithReadStatus[];
+        total: number;
+        page: number;
+      };
     },
   });
 
   // Fetch subcategories for parent categories (reuses categories cache)
   const { data: allCategories } = useQuery({
-    queryKey: ['categories'],
+    queryKey: ["categories"],
     queryFn: async () => {
-      const { data } = await api.get('/categories');
+      const { data } = await api.get("/categories");
       return data.categories as CategoryWithChildren[];
     },
     staleTime: 1000 * 60 * 5,
   });
 
   // Find subcategories if this is a parent category
-  const subcategories = categoryData && !categoryData.parent
-    ? allCategories?.find((c) => c.slug === slug)?.children || []
-    : [];
+  const subcategories =
+    categoryData && !categoryData.parent
+      ? allCategories?.find((c) => c.slug === slug)?.children || []
+      : [];
 
-  const totalPages = threadsData ? Math.ceil(threadsData.total / THREADS_PER_PAGE) : 0;
+  const totalPages = threadsData
+    ? Math.ceil(threadsData.total / THREADS_PER_PAGE)
+    : 0;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -56,11 +76,16 @@ export default function CategoryView() {
       <div className="flex justify-between items-start mb-6">
         <div>
           <nav className="text-sm text-muted-foreground mb-2">
-            <Link to="/" className="hover:text-primary transition-colors">Home</Link>
+            <Link to="/" className="hover:text-primary transition-colors">
+              Home
+            </Link>
             <span className="mx-2">/</span>
             {categoryData?.parent && (
               <>
-                <Link to={`/c/${categoryData.parent.slug}`} className="hover:text-primary transition-colors">
+                <Link
+                  to={`/c/${categoryData.parent.slug}`}
+                  className="hover:text-primary transition-colors"
+                >
                   {categoryData.parent.name}
                 </Link>
                 <span className="mx-2">/</span>
@@ -68,9 +93,13 @@ export default function CategoryView() {
             )}
             <span>{categoryData?.name || slug}</span>
           </nav>
-          <h1 className="text-2xl font-heading font-bold">{categoryData?.name || slug}</h1>
+          <h1 className="text-2xl font-heading font-bold">
+            {categoryData?.name || slug}
+          </h1>
           {categoryData?.description && (
-            <p className="text-muted-foreground mt-1">{categoryData.description}</p>
+            <p className="text-muted-foreground mt-1">
+              {categoryData.description}
+            </p>
           )}
         </div>
         {profile && (
@@ -89,29 +118,15 @@ export default function CategoryView() {
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Subcategories
           </h2>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             {subcategories.map((sub) => (
-              <Link key={sub.id} to={`/c/${sub.slug}`}>
-                <Card className="bg-card/50 hover:bg-card hover:border-primary/30 transition-all">
-                  <CardContent className="p-3">
-                    <div className="flex items-start gap-2">
-                      <ScrollText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <h3 className="font-medium text-sm">{sub.name}</h3>
-                        {sub.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                            {sub.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          <span>{sub.thread_count} threads</span>
-                          <span>{sub.post_count} posts</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+              <CategoryCard
+                key={sub.id}
+                category={sub}
+                compact
+                showIcon
+                showLastActivity={false}
+              />
             ))}
           </div>
         </div>
@@ -119,16 +134,7 @@ export default function CategoryView() {
 
       {/* Thread list */}
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Card key={i} className="bg-card/50">
-              <CardContent className="p-4">
-                <Skeleton className="h-5 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-40" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <LoadingState variant="thread" count={5} showAvatar={false} />
       ) : threadsData?.threads.length === 0 ? (
         <Card className="bg-card/50">
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -137,48 +143,16 @@ export default function CategoryView() {
         </Card>
       ) : (
         <>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             {threadsData?.threads.map((thread) => (
-              <Link key={thread.id} to={`/threads/${thread.id}`}>
-                <Card className="bg-card/50 hover:bg-card hover:border-primary/30 transition-all duration-200 cursor-pointer group">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {thread.is_pinned && (
-                            <Badge variant="secondary" className="gap-1">
-                              <Pin className="h-3 w-3" />
-                              Pinned
-                            </Badge>
-                          )}
-                          {thread.is_locked && (
-                            <Badge variant="secondary" className="gap-1">
-                              <Lock className="h-3 w-3" />
-                              Locked
-                            </Badge>
-                          )}
-                          <h3 className="font-medium group-hover:text-primary transition-colors truncate">
-                            {thread.title}
-                          </h3>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          by {thread.author?.display_name || thread.author?.username || 'Unknown'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground shrink-0">
-                        <div className="flex items-center gap-1">
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          <span>{thread.post_count}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs">
-                          <Clock className="h-3 w-3" />
-                          <span>{formatDistanceToNow(new Date(thread.last_post_at))} ago</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+              <ThreadCard
+                key={thread.id}
+                thread={thread}
+                showAvatar={false}
+                showCategory={false}
+                hasUnread={thread.has_unread}
+                unreadCount={thread.unread_count}
+              />
             ))}
           </div>
 

@@ -167,6 +167,18 @@ export default function Header() {
                     Settings
                   </button>
                   <button
+                    onClick={() => handleNavClick('/unread')}
+                    className="text-sm px-2 py-1.5 text-left hover:text-primary transition-colors"
+                  >
+                    What's New
+                  </button>
+                  <button
+                    onClick={() => handleNavClick('/watching')}
+                    className="text-sm px-2 py-1.5 text-left hover:text-primary transition-colors"
+                  >
+                    Watching
+                  </button>
+                  <button
                     onClick={() => handleNavClick('/notifications')}
                     className="text-sm px-2 py-1.5 text-left hover:text-primary transition-colors"
                   >

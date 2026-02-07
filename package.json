@@ -1,7 +1,11 @@
 {
   "name": "bookoflegends",
   "private": true,
-  "workspaces": ["shared", "server", "client"],
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
   "scripts": {
     "dev:server": "yarn workspace @bookoflegends/server dev",
     "dev:client": "yarn workspace @bookoflegends/client dev",
@@ -12,7 +16,12 @@
     "build": "yarn build:shared && concurrently \"yarn build:server\" \"yarn build:client\""
   },
   "devDependencies": {
+    "@types/turndown": "^5.0.6",
     "concurrently": "^9.1.0",
     "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "mysql2": "^3.16.3",
+    "turndown": "^7.2.2"
   }
 }

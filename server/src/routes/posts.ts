@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { requireAdmin } from '../middleware/admin.js';
 import { validate } from '../middleware/validate.js';
-import { postCreateSchema, postUpdateSchema } from '../validators/schemas.js';
+import { postCreateSchema, postUpdateSchema, reactionSchema } from '../validators/schemas.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { renderMarkdown } from '../lib/markdown.js';
+import { canModify } from '../lib/authorization.js';
+import { notifyOnNewPost } from '../services/notifications.js';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ router.post('/threads/:id/posts', requireAuth, validate(postCreateSchema), async
     // Check thread exists and isn't locked
     const { data: thread } = await supabaseAdmin
       .from('threads')
-      .select('id, is_locked, author_id')
+      .select('id, title, is_locked, author_id')
       .eq('id', req.params.id)
       .single();
 
@@ -48,15 +49,12 @@ router.post('/threads/:id/posts', requireAuth, validate(postCreateSchema), async
       return;
     }
 
-    // Create notification for thread author (if not self-replying)
-    if (thread.author_id !== req.user!.id) {
-      await supabaseAdmin.from('notifications').insert({
-        user_id: thread.author_id,
-        type: 'reply_to_thread',
-        title: `${req.user!.username} replied to your thread`,
-        link: `/threads/${thread.id}`,
-      });
-    }
+    // Send notifications asynchronously (don't await to speed up response)
+    notifyOnNewPost(
+      { id: post.id, content },
+      { id: thread.id, title: thread.title, author_id: thread.author_id },
+      req.user!
+    ).catch((err) => console.error('Notification error:', err));
 
     res.status(201).json({ post });
   } catch (err) {
@@ -78,7 +76,7 @@ router.put('/posts/:id', requireAuth, validate(postUpdateSchema), async (req, re
       return;
     }
 
-    if (post.author_id !== req.user!.id) {
+    if (!canModify(post, req.user!)) {
       res.status(403).json({ error: 'Not authorized' });
       return;
     }
@@ -122,8 +120,7 @@ router.delete('/posts/:id', requireAuth, async (req, res, next) => {
       return;
     }
 
-    // Check authorization
-    if (post.author_id !== req.user!.id && req.user!.role !== 'admin') {
+    if (!canModify(post, req.user!)) {
       res.status(403).json({ error: 'Not authorized' });
       return;
     }
@@ -159,9 +156,9 @@ router.delete('/posts/:id', requireAuth, async (req, res, next) => {
 });
 
 // POST /api/posts/:id/reactions - Add a reaction
-router.post('/posts/:id/reactions', requireAuth, async (req, res, next) => {
+router.post('/posts/:id/reactions', requireAuth, validate(reactionSchema), async (req, res, next) => {
   try {
-    const { reaction_type = 'like' } = req.body;
+    const { reaction_type } = req.body;
 
     const { data: post } = await supabaseAdmin
       .from('posts')
@@ -196,9 +193,9 @@ router.post('/posts/:id/reactions', requireAuth, async (req, res, next) => {
 });
 
 // DELETE /api/posts/:id/reactions - Remove a reaction
-router.delete('/posts/:id/reactions', requireAuth, async (req, res, next) => {
+router.delete('/posts/:id/reactions', requireAuth, validate(reactionSchema), async (req, res, next) => {
   try {
-    const { reaction_type = 'like' } = req.body;
+    const { reaction_type } = req.body;
 
     const { error } = await supabaseAdmin
       .from('post_reactions')

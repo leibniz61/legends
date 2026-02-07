@@ -9,6 +9,7 @@ export interface Profile {
   role: UserRole;
   post_count: number;
   thread_count: number;
+  last_seen_at: string | null;
   created_at: string;
   updated_at: string;
 }

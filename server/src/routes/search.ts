@@ -32,7 +32,7 @@ router.get('/', async (req, res, next) => {
     } else {
       const { data, count } = await supabaseAdmin
         .from('threads')
-        .select('*, author:profiles(id, username, display_name, avatar_url), category:categories(id, name, slug)', { count: 'exact' })
+        .select('*, author:profiles!threads_author_id_fkey(id, username, display_name, avatar_url), category:categories(id, name, slug)', { count: 'exact' })
         .textSearch('search_vector', tsquery)
         .order('last_post_at', { ascending: false })
         .range(offset, offset + SEARCH_RESULTS_PER_PAGE - 1);

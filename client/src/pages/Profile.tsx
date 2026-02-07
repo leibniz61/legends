@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Shield, ScrollText, MessageSquare, Calendar, Settings } from 'lucide-react';
+import { Shield, ScrollText, MessageSquare, Calendar, Settings, Circle } from 'lucide-react';
 
 export default function Profile() {
   const { username } = useParams<{ username: string }>();
@@ -104,7 +104,7 @@ export default function Profile() {
 
           <Separator className="my-4" />
 
-          <div className="flex gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <ScrollText className="h-3.5 w-3.5" />
               <span>{profileData.thread_count} threads</span>
@@ -117,6 +117,22 @@ export default function Profile() {
               <Calendar className="h-3.5 w-3.5" />
               <span>Joined {format(new Date(profileData.created_at), 'MMM yyyy')}</span>
             </div>
+            {profileData.last_seen_at && (
+              <div className="flex items-center gap-1.5">
+                {/* Online if seen in last 5 minutes */}
+                {Date.now() - new Date(profileData.last_seen_at).getTime() < 5 * 60 * 1000 ? (
+                  <>
+                    <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
+                    <span className="text-green-500">Online</span>
+                  </>
+                ) : (
+                  <>
+                    <Circle className="h-2.5 w-2.5" />
+                    <span>Last seen {formatDistanceToNow(new Date(profileData.last_seen_at))} ago</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

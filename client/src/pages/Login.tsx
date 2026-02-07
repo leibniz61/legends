@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,21 +7,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { useZodForm } from '@/hooks/useZodForm';
+import { loginSchema, type LoginInput } from '@bookoflegends/shared';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  const form = useZodForm({
+    schema: loginSchema,
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  async function onSubmit(data: LoginInput) {
     setError('');
-    setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    const { error } = await supabase.auth.signInWithPassword(data);
 
     if (error) {
       setError(error.message);
@@ -38,6 +42,8 @@ export default function Login() {
     });
   }
 
+  const { errors, isSubmitting } = form.formState;
+
   return (
     <div className="max-w-md mx-auto mt-12">
       <Card className="bg-card/50 border-border/60">
@@ -52,17 +58,18 @@ export default function Login() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                {...form.register('email')}
               />
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -77,13 +84,14 @@ export default function Login() {
               <Input
                 id="password"
                 type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                {...form.register('password')}
               />
+              {errors.password && (
+                <p className="text-xs text-destructive">{errors.password.message}</p>
+              )}
             </div>
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? 'Signing in...' : 'Sign In'}
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
 

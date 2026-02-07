@@ -5,6 +5,8 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeft,
+  Sparkles,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,10 +18,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSidebar } from "@/contexts/SidebarContext";
 import api from "@/lib/api";
 import type { CategoryWithChildren } from "@bookoflegends/shared";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 export default function AppSidebar() {
   const { isOpen, toggle } = useSidebar();
+  const { profile } = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -73,6 +77,38 @@ export default function AppSidebar() {
 
         {/* Scrollable content */}
         <nav className="flex-1 overflow-auto p-2">
+          {/* User quick links */}
+          {profile && (
+            <div className="mb-4">
+              <div className="space-y-1">
+                <Link
+                  to="/unread"
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                    currentPath === "/unread"
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-foreground hover:bg-muted"
+                  )}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  What's New
+                </Link>
+                <Link
+                  to="/watching"
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                    currentPath === "/watching"
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-foreground hover:bg-muted"
+                  )}
+                >
+                  <Eye className="h-4 w-4" />
+                  Watching
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Categories */}
           <div>
             <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">

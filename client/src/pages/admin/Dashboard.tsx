@@ -1,10 +1,22 @@
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, FolderOpen, Users } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Shield, FolderOpen, Users, Flag } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { profile } = useAuth();
+
+  const { data: reportStats } = useQuery({
+    queryKey: ['admin', 'reports', 'stats'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/reports/stats');
+      return data as { pending_count: number };
+    },
+    enabled: !!profile && profile.role === 'admin',
+  });
 
   if (!profile || profile.role !== 'admin') {
     return (
@@ -51,6 +63,27 @@ export default function AdminDashboard() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 View users, change roles, and manage bans
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link to="/admin/moderation">
+          <Card className="bg-card/50 hover:bg-card hover:border-primary/30 transition-all duration-200 cursor-pointer group h-full">
+            <CardHeader>
+              <CardTitle className="text-lg font-heading flex items-center gap-2 group-hover:text-primary transition-colors">
+                <Flag className="h-5 w-5" />
+                Moderation Queue
+                {reportStats && reportStats.pending_count > 0 && (
+                  <Badge variant="destructive" className="ml-auto">
+                    {reportStats.pending_count}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Review and resolve reported content
               </p>
             </CardContent>
           </Card>
