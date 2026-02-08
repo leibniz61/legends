@@ -4,3 +4,8 @@ dist/
 *.tsbuildinfo
 *.code-workspace
 package-lock.json
+
+# Yarn 3+
+.yarn/cache
+.yarn/install-state.gz
+.pnp.*

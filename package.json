@@ -23,5 +23,6 @@
   "dependencies": {
     "mysql2": "^3.16.3",
     "turndown": "^7.2.2"
-  }
+  },
+  "packageManager": "yarn@4.12.0"
 }
