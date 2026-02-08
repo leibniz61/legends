@@ -22,8 +22,27 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(helmet());
+
+// CORS configuration - allows CLIENT_URL, localhost, and Render preview URLs
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:6173',
+].filter(Boolean) as string[];
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    // Allow if origin is in the allowed list
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    // Allow all Render preview URLs (*.onrender.com)
+    if (/\.onrender\.com$/.test(origin)) return callback(null, true);
+
+    callback(new Error(`CORS not allowed for origin: ${origin}`));
+  },
   credentials: true,
 }));
 app.use(requestId);
