@@ -5,7 +5,7 @@ dist/
 *.code-workspace
 package-lock.json
 
-# Yarn 3+
+# Yarn
 .yarn/cache
 .yarn/install-state.gz
 .pnp.*

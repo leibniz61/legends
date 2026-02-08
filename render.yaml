@@ -23,8 +23,6 @@ projects:
                 - package.json
                 - yarn.lock
                 - .yarnrc.yml
-            previews:
-              generation: automatic
           - type: web
             name: bookoflegends (server)
             runtime: node
@@ -45,5 +43,3 @@ projects:
                 - package.json
                 - yarn.lock
                 - .yarnrc.yml
-            previews:
-              generation: automatic
