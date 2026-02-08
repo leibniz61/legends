@@ -96,3 +96,22 @@ export const REPORT_REASON_LABELS: Record<string, string> = {
   off_topic: 'Off Topic',
   other: 'Other',
 };
+
+// ============================================================================
+// Image uploads
+// ============================================================================
+
+export const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
+export const MAX_POST_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+export const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+] as const;
+
+export const IMAGE_SIZE_PRESETS = {
+  small: { width: 200, label: 'Small' },
+  medium: { width: 400, label: 'Medium' },
+  large: { width: 800, label: 'Large' },
+} as const;

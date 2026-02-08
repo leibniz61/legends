@@ -73,43 +73,48 @@ export default function CategoryView() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <nav className="text-sm text-muted-foreground mb-2">
-            <Link to="/" className="hover:text-primary transition-colors">
-              Home
-            </Link>
-            <span className="mx-2">/</span>
-            {categoryData?.parent && (
-              <>
-                <Link
-                  to={`/c/${categoryData.parent.slug}`}
-                  className="hover:text-primary transition-colors"
-                >
-                  {categoryData.parent.name}
-                </Link>
-                <span className="mx-2">/</span>
-              </>
+      <div className="mb-6">
+        {/* Breadcrumbs */}
+        <nav className="text-sm text-muted-foreground mb-2">
+          <Link to="/" className="hover:text-primary transition-colors">
+            Home
+          </Link>
+          <span className="mx-2">/</span>
+          {categoryData?.parent && (
+            <>
+              <Link
+                to={`/c/${categoryData.parent.slug}`}
+                className="hover:text-primary transition-colors"
+              >
+                {categoryData.parent.name}
+              </Link>
+              <span className="mx-2">/</span>
+            </>
+          )}
+          <span>{categoryData?.name || slug}</span>
+        </nav>
+
+        {/* Title row with button */}
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-heading font-bold">
+              {categoryData?.name || slug}
+            </h1>
+            {categoryData?.description && (
+              <p className="text-muted-foreground mt-1">
+                {categoryData.description}
+              </p>
             )}
-            <span>{categoryData?.name || slug}</span>
-          </nav>
-          <h1 className="text-2xl font-heading font-bold">
-            {categoryData?.name || slug}
-          </h1>
-          {categoryData?.description && (
-            <p className="text-muted-foreground mt-1">
-              {categoryData.description}
-            </p>
+          </div>
+          {profile && (
+            <Button size="sm" asChild>
+              <Link to={`/c/${slug}/new`}>
+                <Plus className="h-4 w-4" />
+                New Thread
+              </Link>
+            </Button>
           )}
         </div>
-        {profile && (
-          <Button asChild>
-            <Link to={`/c/${slug}/new`}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Thread
-            </Link>
-          </Button>
-        )}
       </div>
 
       {/* Subcategories - only for parent categories */}

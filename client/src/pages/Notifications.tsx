@@ -54,7 +54,7 @@ export default function Notifications() {
             onClick={() => markAllRead.mutate()}
             className="text-muted-foreground"
           >
-            <CheckCheck className="mr-2 h-4 w-4" />
+            <CheckCheck className="h-4 w-4" />
             Mark all read
           </Button>
         )}

@@ -62,25 +62,22 @@ export default function Header() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem onClick={() => navigate(`/u/${profile.username}`)}>
-                      <User className="mr-2 h-4 w-4" />
+                      <User className="h-4 w-4" />
                       Profile
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/settings/profile')}>
-                      <Settings className="mr-2 h-4 w-4" />
+                      <Settings className="h-4 w-4" />
                       Settings
                     </DropdownMenuItem>
-                    {profile.role === 'admin' && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => navigate('/admin')}>
-                          <Shield className="mr-2 h-4 w-4" />
-                          Admin Panel
-                        </DropdownMenuItem>
-                      </>
-                    )}
                     <DropdownMenuSeparator />
+                    {profile.role === 'admin' && (
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
+                        <Shield className="h-4 w-4" />
+                        Admin Panel
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onClick={handleSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
+                      <LogOut className="h-4 w-4" />
                       Sign Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>

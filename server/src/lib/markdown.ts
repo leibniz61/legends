@@ -31,9 +31,9 @@ marked.use({ extensions: [mentionExtension] });
 
 export function renderMarkdown(markdown: string): string {
   const rawHtml = marked.parse(markdown, { async: false }) as string;
-  // Sanitize but allow mention links
+  // Sanitize but allow mention links and image sizing
   return DOMPurify.sanitize(rawHtml, {
-    ADD_ATTR: ['class'],
+    ADD_ATTR: ['class', 'width', 'height'],
   });
 }
 

@@ -41,6 +41,15 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
+export const resetPasswordWithConfirmSchema = resetPasswordSchema
+  .extend({
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
+
 // ============================================================================
 // Profile schemas
 // ============================================================================
@@ -55,6 +64,25 @@ export const profileUpdateSchema = z.object({
     .max(MAX_BIO_LENGTH, `Bio must be at most ${MAX_BIO_LENGTH} characters`)
     .optional(),
   avatar_url: z.string().url('Invalid URL').optional().or(z.literal('')),
+});
+
+export const adminUserUpdateSchema = z.object({
+  username: z
+    .string()
+    .min(MIN_USERNAME_LENGTH, `Username must be at least ${MIN_USERNAME_LENGTH} characters`)
+    .max(MAX_USERNAME_LENGTH, `Username must be at most ${MAX_USERNAME_LENGTH} characters`)
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and hyphens'),
+  display_name: z
+    .string()
+    .max(MAX_USERNAME_LENGTH, `Display name must be at most ${MAX_USERNAME_LENGTH} characters`)
+    .optional()
+    .or(z.literal('')),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  bio: z
+    .string()
+    .max(MAX_BIO_LENGTH, `Bio must be at most ${MAX_BIO_LENGTH} characters`)
+    .optional()
+    .or(z.literal('')),
 });
 
 // ============================================================================
@@ -145,7 +173,11 @@ export const reportUpdateSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ResetPasswordWithConfirmInput = z.infer<typeof resetPasswordWithConfirmSchema>;
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
+export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>;
 export type CategoryCreateInput = z.infer<typeof categoryCreateSchema>;
 export type CategoryUpdateInput = z.infer<typeof categoryUpdateSchema>;
 export type ThreadCreateInput = z.infer<typeof threadCreateSchema>;

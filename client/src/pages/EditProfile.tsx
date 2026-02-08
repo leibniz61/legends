@@ -1,41 +1,61 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/lib/api';
+import { profileUpdateSchema, type ProfileUpdateInput } from '@bookoflegends/shared';
+import { useZodForm } from '@/hooks/useZodForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AvatarUpload } from '@/components/shared';
 import { Settings } from 'lucide-react';
 
 export default function EditProfile() {
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const [displayName, setDisplayName] = useState(profile?.display_name || '');
-  const [bio, setBio] = useState(profile?.bio || '');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+  const form = useZodForm({
+    schema: profileUpdateSchema,
+    defaultValues: {
+      display_name: '',
+      bio: '',
+      avatar_url: '',
+    },
+  });
+
+  // Set initial values when profile loads
+  useEffect(() => {
+    if (profile) {
+      form.reset({
+        display_name: profile.display_name || '',
+        bio: profile.bio || '',
+        avatar_url: profile.avatar_url || '',
+      });
+    }
+  }, [profile, form]);
+
+  async function onSubmit(data: ProfileUpdateInput) {
     setError('');
 
     try {
       await api.put('/profiles/me', {
-        display_name: displayName || undefined,
-        bio: bio || undefined,
+        display_name: data.display_name || undefined,
+        bio: data.bio || undefined,
+        avatar_url: data.avatar_url || undefined,
       });
       navigate(`/u/${profile!.username}`);
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to update profile';
       setError(message);
     }
-
-    setLoading(false);
   }
+
+  const { errors, isSubmitting } = form.formState;
+  const bio = form.watch('bio') || '';
 
   if (!profile) {
     return (
@@ -63,34 +83,47 @@ export default function EditProfile() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <AvatarUpload
+              currentUrl={form.watch('avatar_url') || null}
+              userId={profile.id}
+              displayName={profile.display_name}
+              username={profile.username}
+              onUpload={(url) => form.setValue('avatar_url', url)}
+              onRemove={() => form.setValue('avatar_url', '')}
+            />
+
+            <div className="flex flex-col gap-2">
               <Label htmlFor="displayName">Display Name</Label>
               <Input
                 id="displayName"
                 type="text"
-                maxLength={30}
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
                 placeholder={profile.username}
+                {...form.register('display_name')}
               />
+              {errors.display_name && (
+                <p className="text-xs text-destructive">{errors.display_name.message}</p>
+              )}
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="bio">Bio</Label>
               <Textarea
                 id="bio"
-                maxLength={500}
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
                 placeholder="Tell us about yourself..."
                 rows={4}
+                {...form.register('bio')}
               />
-              <p className="text-xs text-muted-foreground text-right">
-                {bio.length}/500
-              </p>
+              <div className="flex justify-between text-xs">
+                {errors.bio ? (
+                  <p className="text-destructive">{errors.bio.message}</p>
+                ) : (
+                  <span />
+                )}
+                <span className="text-muted-foreground">{bio.length}/500</span>
+              </div>
             </div>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Changes'}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </Button>
           </form>
         </CardContent>

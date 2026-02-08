@@ -1,6 +1,8 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { resetPasswordWithConfirmSchema, type ResetPasswordWithConfirmInput } from '@bookoflegends/shared';
+import { useZodForm } from '@/hooks/useZodForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,13 +12,18 @@ import { KeyRound, CheckCircle } from 'lucide-react';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
   const [checking, setChecking] = useState(true);
+
+  const form = useZodForm({
+    schema: resetPasswordWithConfirmSchema,
+    defaultValues: {
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
   useEffect(() => {
     // Check if user arrived via password reset link
@@ -50,25 +57,10 @@ export default function ResetPassword() {
     checkSession();
   }, []);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function onSubmit(data: ResetPasswordWithConfirmInput) {
     setError('');
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-
-    setLoading(true);
-
-    const { error } = await supabase.auth.updateUser({ password });
-
-    setLoading(false);
+    const { error } = await supabase.auth.updateUser({ password: data.password });
 
     if (error) {
       setError(error.message);
@@ -80,6 +72,8 @@ export default function ResetPassword() {
     // Redirect to home after a short delay
     setTimeout(() => navigate('/'), 2000);
   }
+
+  const { errors, isSubmitting } = form.formState;
 
   if (checking) {
     return (
@@ -139,32 +133,34 @@ export default function ResetPassword() {
                 </Alert>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="password">New Password</Label>
                   <Input
                     id="password"
                     type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 8 characters"
+                    {...form.register('password')}
                   />
+                  {errors.password && (
+                    <p className="text-xs text-destructive">{errors.password.message}</p>
+                  )}
                 </div>
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
                   <Input
                     id="confirmPassword"
                     type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Enter password again"
+                    {...form.register('confirmPassword')}
                   />
+                  {errors.confirmPassword && (
+                    <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+                  )}
                 </div>
-                <Button type="submit" disabled={loading} className="w-full">
-                  <KeyRound className="mr-2 h-4 w-4" />
-                  {loading ? 'Updating...' : 'Update Password'}
+                <Button type="submit" disabled={isSubmitting} className="w-full">
+                  <KeyRound className="h-4 w-4" />
+                  {isSubmitting ? 'Updating...' : 'Update Password'}
                 </Button>
               </form>
             </>

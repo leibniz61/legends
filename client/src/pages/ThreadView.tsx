@@ -2,7 +2,7 @@ import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useState, useRef } from "react";
 import DOMPurify from "dompurify";
-import MDEditor from "@uiw/react-md-editor";
+import { MarkdownEditor } from "@/components/forum/MarkdownEditor";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -218,7 +218,7 @@ export default function ThreadView() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* Breadcrumb */}
-      <nav className="text-sm text-muted-foreground mb-4 flex items-center gap-1 flex-wrap">
+      <nav className="text-sm text-muted-foreground mb-2 flex items-center gap-1 flex-wrap">
         <Link to="/" className="hover:text-primary transition-colors">
           Home
         </Link>
@@ -257,17 +257,17 @@ export default function ThreadView() {
             {profile?.role === "admin" && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="outline" size="sm">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => pinMutation.mutate()}>
-                    <Pin className="mr-2 h-4 w-4" />
+                    <Pin className="h-4 w-4" />
                     {thread.is_pinned ? "Unpin" : "Pin"}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => lockMutation.mutate()}>
-                    <Lock className="mr-2 h-4 w-4" />
+                    <Lock className="h-4 w-4" />
                     {thread.is_locked ? "Unlock" : "Lock"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -296,7 +296,7 @@ export default function ThreadView() {
           className="w-full mb-4 border-primary/40 text-primary hover:bg-primary/10"
           onClick={handleNewPostsClick}
         >
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="h-4 w-4" />
           {newPostCount} new {newPostCount === 1 ? "reply" : "replies"} — Click
           to load
         </Button>
@@ -374,14 +374,24 @@ export default function ThreadView() {
                 {/* Post content */}
                 {editingPostId === post.id ? (
                   <div className="p-4">
-                    <div data-color-mode="dark">
-                      <MDEditor
-                        value={editContent}
-                        onChange={(val) => setEditContent(val || "")}
-                        height={200}
-                      />
-                    </div>
-                    <div className="flex gap-2 mt-3">
+                    <MarkdownEditor
+                      value={editContent}
+                      onChange={setEditContent}
+                      height={200}
+                      disabled={editMutation.isPending}
+                    />
+                    <div className="flex justify-end gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingPostId(null);
+                          setEditContent("");
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                        Cancel
+                      </Button>
                       <Button
                         size="sm"
                         onClick={() =>
@@ -392,19 +402,8 @@ export default function ThreadView() {
                         }
                         disabled={editMutation.isPending || !editContent.trim()}
                       >
-                        <Check className="mr-1 h-3.5 w-3.5" />
+                        <Check className="h-4 w-4" />
                         Save
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditingPostId(null);
-                          setEditContent("");
-                        }}
-                      >
-                        <X className="mr-1 h-3.5 w-3.5" />
-                        Cancel
                       </Button>
                     </div>
                   </div>
@@ -464,7 +463,7 @@ export default function ThreadView() {
                             <DropdownMenuItem
                               onClick={() => handleEditClick(post)}
                             >
-                              <Pencil className="mr-2 h-3.5 w-3.5" />
+                              <Pencil className="h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
                           )}
@@ -473,7 +472,7 @@ export default function ThreadView() {
                               onClick={() => setDeletePostId(post.id)}
                               className="text-destructive focus:text-destructive"
                             >
-                              <Trash2 className="mr-2 h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
                           )}
@@ -481,7 +480,7 @@ export default function ThreadView() {
                             <DropdownMenuItem
                               onClick={() => setReportPostId(post.id)}
                             >
-                              <Flag className="mr-2 h-3.5 w-3.5" />
+                              <Flag className="h-4 w-4" />
                               Report
                             </DropdownMenuItem>
                           )}

@@ -91,7 +91,7 @@ export default function Profile() {
             {isOwn && (
               <Button variant="outline" size="sm" asChild>
                 <Link to="/settings/profile">
-                  <Settings className="mr-2 h-4 w-4" />
+                  <Settings className="h-4 w-4" />
                   Edit Profile
                 </Link>
               </Button>

@@ -1,6 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { forgotPasswordSchema, type ForgotPasswordInput } from '@bookoflegends/shared';
+import { useZodForm } from '@/hooks/useZodForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,29 +11,34 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Mail, CheckCircle } from 'lucide-react';
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sentEmail, setSentEmail] = useState('');
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  const form = useZodForm({
+    schema: forgotPasswordSchema,
+    defaultValues: {
+      email: '',
+    },
+  });
+
+  async function onSubmit(data: ForgotPasswordInput) {
     setError('');
-    setLoading(true);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
-
-    setLoading(false);
 
     if (error) {
       setError(error.message);
       return;
     }
 
+    setSentEmail(data.email);
     setSent(true);
   }
+
+  const { errors, isSubmitting } = form.formState;
 
   return (
     <div className="max-w-md mx-auto mt-12">
@@ -51,7 +58,7 @@ export default function ForgotPassword() {
                 </div>
               </div>
               <p className="text-muted-foreground">
-                We've sent a password reset link to <strong className="text-foreground">{email}</strong>.
+                We've sent a password reset link to <strong className="text-foreground">{sentEmail}</strong>.
                 Check your inbox and follow the instructions.
               </p>
               <p className="text-sm text-muted-foreground">
@@ -72,21 +79,22 @@ export default function ForgotPassword() {
                 </Alert>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
                     type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
+                    {...form.register('email')}
                   />
+                  {errors.email && (
+                    <p className="text-xs text-destructive">{errors.email.message}</p>
+                  )}
                 </div>
-                <Button type="submit" disabled={loading} className="w-full">
-                  <Mail className="mr-2 h-4 w-4" />
-                  {loading ? 'Sending...' : 'Send Reset Link'}
+                <Button type="submit" disabled={isSubmitting} className="w-full">
+                  <Mail className="h-4 w-4" />
+                  {isSubmitting ? 'Sending...' : 'Send Reset Link'}
                 </Button>
               </form>
             </>

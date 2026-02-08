@@ -176,12 +176,12 @@ export default function ModerationQueue() {
                             onClick={() => deletePostMutation.mutate(report.post.id)}
                             className="text-destructive focus:text-destructive"
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                             Delete Post
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link to={`/admin/users?search=${report.post.author.username}`}>
-                              <Ban className="mr-2 h-4 w-4" />
+                              <Ban className="h-4 w-4" />
                               Ban Author
                             </Link>
                           </DropdownMenuItem>

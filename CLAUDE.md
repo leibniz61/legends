@@ -76,6 +76,7 @@ All routes prefixed with `/api/`:
 - Tailwind units: gap-2, p-4, etc. (1 unit = 4px)
 - Border widths in px: `border-[0.5px]` or `border-[1px]`
 - Fantasy theme: dark mode default, Cinzel font for headings, gold primary color
+- For all input labels/error messages, use "flex flex-col gap-2" spacing (distance from labels to input)
 
 ## For all prompts
 

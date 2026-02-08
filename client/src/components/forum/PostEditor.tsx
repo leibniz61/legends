@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import MDEditor from '@uiw/react-md-editor';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import api from '@/lib/api';
-import { Send } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MarkdownEditor } from "./MarkdownEditor";
+import api from "@/lib/api";
+import { Send } from "lucide-react";
 
 interface PostEditorProps {
   threadId: string;
@@ -11,28 +11,36 @@ interface PostEditorProps {
   initialContent?: string;
 }
 
-export default function PostEditor({ threadId, onSuccess, initialContent = '' }: PostEditorProps) {
+export default function PostEditor({
+  threadId,
+  onSuccess,
+  initialContent = "",
+}: PostEditorProps) {
   const [content, setContent] = useState(initialContent);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (initialContent) {
-      setContent(prev => prev ? `${prev}\n\n${initialContent}` : initialContent);
+      setContent((prev) =>
+        prev ? `${prev}\n\n${initialContent}` : initialContent
+      );
     }
   }, [initialContent]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   async function handleSubmit() {
     if (!content.trim()) return;
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       await api.post(`/threads/${threadId}/posts`, { content });
-      setContent('');
+      setContent("");
       onSuccess();
     } catch (err: unknown) {
-      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to post reply';
+      const message =
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || "Failed to post reply";
       setError(message);
     }
 
@@ -46,17 +54,22 @@ export default function PostEditor({ threadId, onSuccess, initialContent = '' }:
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <div data-color-mode="dark">
-        <MDEditor value={content} onChange={(val) => setContent(val || '')} height={200} />
+      <MarkdownEditor
+        value={content}
+        onChange={setContent}
+        height={200}
+        disabled={loading}
+      />
+      <div className="flex justify-end mt-4">
+        <Button
+          size="sm"
+          onClick={handleSubmit}
+          disabled={loading || !content.trim()}
+        >
+          <Send className="h-4 w-4" />
+          {loading ? "Posting..." : "Post Reply"}
+        </Button>
       </div>
-      <Button
-        onClick={handleSubmit}
-        disabled={loading || !content.trim()}
-        className="mt-3"
-      >
-        <Send className="mr-2 h-4 w-4" />
-        {loading ? 'Posting...' : 'Post Reply'}
-      </Button>
     </div>
   );
 }

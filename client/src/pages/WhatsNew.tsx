@@ -97,7 +97,7 @@ export default function WhatsNew() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between gap-4 mb-6">
+      <div className="flex items-start justify-between gap-4 h-12">
         <div className="flex items-center gap-3">
           <Sparkles className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-heading font-bold">What's New</h1>
@@ -109,7 +109,7 @@ export default function WhatsNew() {
             onClick={() => markAllReadMutation.mutate()}
             disabled={markAllReadMutation.isPending}
           >
-            <CheckCheck className="h-4 w-4 mr-2" />
+            <CheckCheck className="h-4 w-4" />
             Mark All Read
           </Button>
         ) : null}

@@ -17,13 +17,44 @@ router.get('/users', async (req, res, next) => {
     const limit = 50;
     const offset = (page - 1) * limit;
 
-    const { data, count } = await supabaseAdmin
+    const { data: profiles, count } = await supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    res.json({ users: data || [], total: count || 0, page });
+    // Fetch auth user data to get ban status and email
+    const userIds = (profiles || []).map((p) => p.id);
+    const authUsers: Record<string, { email?: string; banned_until?: string }> = {};
+
+    if (userIds.length > 0) {
+      // Fetch each user's auth data (Supabase admin API)
+      const authPromises = userIds.map(async (id) => {
+        try {
+          const { data } = await supabaseAdmin.auth.admin.getUserById(id);
+          if (data?.user) {
+            authUsers[id] = {
+              email: data.user.email,
+              banned_until: data.user.banned_until as string | undefined,
+            };
+          }
+        } catch {
+          // Ignore individual fetch errors
+        }
+      });
+      await Promise.all(authPromises);
+    }
+
+    // Merge auth data into profiles
+    const users = (profiles || []).map((profile) => ({
+      ...profile,
+      email: authUsers[profile.id]?.email || null,
+      is_banned: authUsers[profile.id]?.banned_until
+        ? new Date(authUsers[profile.id].banned_until!) > new Date()
+        : false,
+    }));
+
+    res.json({ users, total: count || 0, page });
   } catch (err) {
     next(err);
   }
@@ -51,6 +82,55 @@ router.put('/users/:id/ban', async (req, res, next) => {
     }
 
     res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/admin/users/:id - Update user profile (admin)
+router.put('/users/:id', async (req, res, next) => {
+  try {
+    const { username, display_name, bio, email } = req.body;
+
+    // Update profile fields
+    const profileUpdate: Record<string, string | null> = {};
+    if (username !== undefined) profileUpdate.username = username;
+    if (display_name !== undefined) profileUpdate.display_name = display_name || null;
+    if (bio !== undefined) profileUpdate.bio = bio || null;
+
+    if (Object.keys(profileUpdate).length > 0) {
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update(profileUpdate)
+        .eq('id', req.params.id);
+
+      if (profileError) {
+        res.status(400).json({ error: profileError.message });
+        return;
+      }
+    }
+
+    // Update email in auth if provided
+    if (email !== undefined) {
+      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+        req.params.id,
+        { email }
+      );
+
+      if (authError) {
+        res.status(400).json({ error: authError.message });
+        return;
+      }
+    }
+
+    // Fetch updated profile
+    const { data } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    res.json({ user: data });
   } catch (err) {
     next(err);
   }
