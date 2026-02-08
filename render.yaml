@@ -14,7 +14,7 @@ projects:
               - fromGroup: legends (dev)
             buildCommand:
               corepack enable && corepack prepare yarn@4.12.0 --activate &&
-              yarn install && yarn build:shared && cd client && yarn build
+              yarn --frozen-lockfile && yarn build:shared && cd client && yarn build
             staticPublishPath: client/dist
             autoDeployTrigger: commit
             buildFilter:
@@ -56,7 +56,7 @@ projects:
               - fromGroup: legends (prod)
             buildCommand:
               corepack enable && corepack prepare yarn@4.12.0 --activate &&
-              yarn install && yarn build:shared && cd client && yarn build
+              yarn --frozen-lockfile && yarn build:shared && cd client && yarn build
             staticPublishPath: client/dist
             autoDeployTrigger: commit
             buildFilter:
