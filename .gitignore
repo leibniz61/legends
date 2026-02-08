@@ -9,3 +9,5 @@ package-lock.json
 .yarn/cache
 .yarn/install-state.gz
 .pnp.*
+
+.DS_Store

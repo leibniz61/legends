@@ -1,0 +1,53 @@
+# Exported from Render on 2026-02-08T03:06:40Z
+version: "1"
+projects:
+  - name: legends
+    environments:
+      - name: Production
+        services:
+          - type: web
+            name: bookoflegends (client)
+            runtime: static
+            repo: https://github.com/leibniz61/legends
+            envVars:
+              - fromGroup: legends (prod)
+            buildCommand:
+              corepack enable && corepack prepare yarn@4.12.0 --activate &&
+              yarn install && yarn build:shared && cd client && yarn build
+            staticPublishPath: client/dist
+            autoDeployTrigger: commit
+            buildFilter:
+              paths:
+                - client
+                - shared
+                - package.json
+                - yarn.lock
+                - .yarnrc.yml
+            previews:
+              generation: automatic
+              envVars:
+                - fromGroup: legends (dev)
+          - type: web
+            name: bookoflegends (server)
+            runtime: node
+            repo: https://github.com/leibniz61/legends
+            plan: free
+            envVars:
+              - fromGroup: legends (prod)
+            region: oregon
+            buildCommand:
+              corepack enable && corepack prepare yarn@4.12.0 --activate &&
+              yarn --frozen-lockfile && yarn build:shared && cd server && yarn build
+            startCommand: cd server && yarn start
+            autoDeployTrigger: commit
+            buildFilter:
+              paths:
+                - server
+                - shared
+                - package.json
+                - yarn.lock
+                - .yarnrc.yml
+            previews:
+              generation: automatic
+              envVars:
+                - fromGroup: legends (dev)
