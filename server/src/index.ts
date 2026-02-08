@@ -30,9 +30,6 @@ const allowedOrigins = [
   "http://localhost:6173",
 ].filter(Boolean) as string[];
 
-// Pattern for YOUR Render preview URLs only (e.g., bookoflegends-client-pr-42.onrender.com)
-const previewPattern = /^https:\/\/bookoflegends.*\.onrender\.com$/;
-
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -41,9 +38,6 @@ app.use(
 
       // Allow if origin is in the allowed list
       if (allowedOrigins.includes(origin)) return callback(null, true);
-
-      // Allow Render preview URLs only
-      if (previewPattern.test(origin)) return callback(null, true);
 
       callback(new Error(`CORS not allowed for origin: ${origin}`));
     },
